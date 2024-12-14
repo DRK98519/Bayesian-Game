@@ -35,7 +35,7 @@ def solve_zerosum_with_linprog(U):
     b_ub = np.zeros((1, 2*k))
     b_ub = np.matrix(b_ub)
     
-    # contraints Ax = b
+    # Contraints Ax = b
     # A = [0, 1, 1, ..., 1]
     A = np.matrix(np.hstack((0, np.ones((k,)))))
     b = 1.0 # just one condition so scalar 
@@ -90,8 +90,8 @@ def best_response(U, i):
     return np.array(br)
     
 
-def print_payoffs(U, A, round_decimals=None): 
-    '''print_payoffs: Nicely formatted for a 2*2 game 
+def print_payoffs(U, A, round_decimals=None):
+    '''print_payoffs: Nicely formatted for a 2-player game
         INPUTS: 
             U1,U2: (matrices, dim=na1*na2) Payoffs 
             A1: (list of str, len=na1) List of actions of player 1
@@ -182,7 +182,7 @@ def IESDS(A, U, DOPRINT=False, maxit=10000):
     '''Iterated Elimination of Strictly Dominated Strategies 
         INPUTS: 
             A: (list of lists) n lists (one for each player), 
-                    each has len = # of actions to player i
+                    each has len = # of pure strategies to player i (nai)
             U: (list, len=n) list of na1*na2 matrices of payoffs
             DOPRINT: (bool) whether to print output to terminal 
             maxit: (int) break algorithm if this count is ever reached
@@ -193,11 +193,11 @@ def IESDS(A, U, DOPRINT=False, maxit=10000):
             U_undominated: (n-list of matrices of payoffs)
     '''
     
-    U_undominated = copy.copy(U)
-    A_undominated = copy.copy(A)
+    U_undominated = copy.copy(U)    # list of utility matrices for both players
+    A_undominated = copy.copy(A)    # list of action spaces for both players
     
-    n = len(U)
-    na1,na2 = U[0].shape
+    n = len(U)  # n, number of players
+    na1,na2 = U[0].shape    # nai, number of actions for player i
 
     # checks 
     assert n == 2, f'Code only implemented for 2-player games '
@@ -207,22 +207,25 @@ def IESDS(A, U, DOPRINT=False, maxit=10000):
         assert U[i].shape == (na1,na2), f'Payoff matrix for player {i+1} is {U[i].shape}, but {(na1,na2)} for player 1'
 
     # initialize flags 
-    D = np.ones((n,), dtype='bool')
+    D = np.ones(n, dtype='bool')
     
     for it in range(maxit): 
 
-        for i in range(n): 
-            # find undominated actions 
+        for i in range(n): # for every player
+            # find undominated actions (A_undominated[i]) and the undominated action indices (IA), (D[i]) indicates
+            # whether player i has strictly dominated actions
             A_undominated[i], IA, D[i] = find_undominated_actions(U_undominated[i], i, A_undominated[i], DOPRINT)
 
             # if we found at least one, remove it/them from the game 
             if D[i]: 
                 # remove from both players' payoff matrices 
-                for j in range(n): 
+                for j in range(n): # for every player
                     if i == 0: 
                         U_undominated[j] = U_undominated[j][IA, :]
+                        print('U undominated[0]', U_undominated[j])
                     else: 
                         U_undominated[j] = U_undominated[j][:, IA]
+                        print('U undominated[1]', U_undominated[j])
 
 
         # break once we have run an iteration without finding any strategies to remove 
