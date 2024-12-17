@@ -215,17 +215,16 @@ def IESDS(A, U, DOPRINT=False, maxit=10000):
             # find undominated actions (A_undominated[i]) and the undominated action indices (IA), (D[i]) indicates
             # whether player i has strictly dominated actions
             A_undominated[i], IA, D[i] = find_undominated_actions(U_undominated[i], i, A_undominated[i], DOPRINT)
+            # print(f'D[{i}]', D[i])
 
             # if we found at least one, remove it/them from the game 
             if D[i]: 
                 # remove from both players' payoff matrices 
-                for j in range(n): # for every player
-                    if i == 0: 
-                        U_undominated[j] = U_undominated[j][IA, :]
-                        print('U undominated[0]', U_undominated[j])
+                for j in range(n): # update utility matrix for every player
+                    if i == 0: # If player i has strictly dominated actions
+                        U_undominated[j] = U_undominated[j][IA, :]  # remove utilities under strictly dominated actions
                     else: 
                         U_undominated[j] = U_undominated[j][:, IA]
-                        print('U undominated[1]', U_undominated[j])
 
 
         # break once we have run an iteration without finding any strategies to remove 
