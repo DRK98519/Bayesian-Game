@@ -41,7 +41,7 @@ def two_type_strgy_name_gen(A=None, action_name=None, num_a=1):
 
 
 class BNE_instance:
-    def __init__(self, prior_1, prior_2, T1, T2, U1, U2, num_a1, num_a2, a1=None, a2=None):
+    def __init__(self, prior_1, prior_2, U1, U2, num_a1, num_a2, a1=None, a2=None, T1=None, T2=None):
 
         self.player1 = self.Player(prior_1, T1, a1, U1, num_a1)
         self.player2 = self.Player(prior_2, T2, a2, U2, num_a2)
@@ -70,6 +70,8 @@ class BNE_instance:
 
     def interim_exp_comp(self, cond_player, targ_player):
         # Compute interim expected utility under all pure strategies (2 player)
+        if cond_player.interim_exp != {}:
+            cond_player.interim_exp = {}
 
         for indx_t_c, t_c in enumerate(cond_player.T):      # Over all types of cond_player
             cond_player.interim_exp[t_c] = {}
@@ -81,19 +83,27 @@ class BNE_instance:
                     holder = []
                     for indx_t_targ, a_t in enumerate(strgy_t):     # Over 'L', 'R' in 'LR' from A2, for example
                         # Compute p(t_{-n}|t_n) * u_n(t_n, t_{-n}, a_n, pi_{-n}(t_{-n}) for one type t_{-n}
+                        # IMPORTANT: The computation of interim expected utility for player i depend on all players'
+                        #  types
                         if cond_player is self.player1:
                             holder.append(
-                                cond_player.U[indx_t_c][indx_a_c, targ_player.a.index(a_t)] * self.player1.belief[t_c][
+                                cond_player.U[indx_t_c][indx_t_targ][indx_a_c, targ_player.a.index(a_t)] * self.player1.belief[t_c][
                                     targ_player.T[indx_t_targ]])
+                            # if indx_t_c == 0 and indx_a_c == 0 and strgy_t == 'WS' and cond_player is self.player1:
+                            #     print(f'a_c: {a_c}, a_t: {a_t}')
+                            #     print(cond_player.U[indx_t_c][indx_t_targ][indx_a_c, targ_player.a.index(a_t)])
+                            #     print(t_c)
+                            #     print(self.player1.belief[t_c][targ_player.T[indx_t_targ]])
                         elif cond_player == self.player2:
                             holder.append(
-                                cond_player.U[indx_t_c][targ_player.a.index(a_t), indx_a_c] * self.player2.belief[t_c][
+                                cond_player.U[indx_t_c][indx_t_targ][targ_player.a.index(a_t), indx_a_c] * self.player2.belief[t_c][
                                     targ_player.T[indx_t_targ]])
                         else:
                             raise ValueError('interim_exp_comp error')
                     # Compute the interim expected utility for player n given its type t_n, and pure strategy
                     # pi_n(t_n) = a_n, and pi_{-n}
                     cond_player.interim_exp[t_c][(a_c, strgy_t)] = sum(holder)
+        # print(f'cond_player.U[0][0,0]')
         return None
 
     def ex_ante_exp_comp(self, action_names=None):
@@ -125,8 +135,11 @@ class BNE_instance:
                 assert item >= 0.0
                 assert item <= 1.0
             # Check the utility matrix matches the action space size
-            for u in player.U:
-                assert u.shape == (len(self.player1.a), len(self.player2.a))
+            for type_cond in player.U:
+                for u in type_cond:
+                    # Check the utility matrix under all type combo are compatible with action space size
+                    print(u)
+                    assert u.shape == (len(self.player1.a), len(self.player2.a))
 
         prior_list = [self.player1.prior, self.player2.prior]
 
@@ -137,10 +150,12 @@ class BNE_instance:
         payoff1 = np.empty((num_a1 * num_T1, num_a2 * num_T2))
         payoff2 = np.empty((num_a1 * num_T1, num_a2 * num_T2))
 
-        # Compute interim expected utility for player 1
-        self.interim_exp_comp(cond_player=self.player1, targ_player=self.player2)
-        # Compute interim expected utility for player 2
-        self.interim_exp_comp(cond_player=self.player2, targ_player=self.player1)
+        if self.player1.interim_exp == {}:
+            # Compute interim expected utility for player 1
+            self.interim_exp_comp(cond_player=self.player1, targ_player=self.player2)
+        if self.player2.interim_exp == {}:
+            # Compute interim expected utility for player 2
+            self.interim_exp_comp(cond_player=self.player2, targ_player=self.player1)
 
         for i_row, strgy_1 in enumerate(self.player1.A):
             for i_col, strgy_2 in enumerate(self.player2.A):
@@ -161,28 +176,48 @@ class BNE_instance:
 
 
 if __name__ == "__main__":
-    prior_1 = np.array([1])
-    T1 = ['SH_1']
-    u11 = np.array([[3, 0], [2, 1]])
-    U1 = [u11]
-    a1 = ['U', 'D']
+    # prior_1 = np.array([1])
+    # T1 = ['SH_1']
+    # u11_21 = np.array([[3, 0], [2, 1]])
+    # u11_22 = u11_21
+    # U1 = [[u11_21, u11_22]]
+    # a1 = ['U', 'D']
+    # num_a1 = 2
+    #
+    # p = 0.2
+    # prior_2 = np.array([p, 1-p])
+    # T2 = ['PD_2', 'SH_2']
+    # u21_11 = np.array([[3, 4], [1, 2]])
+    # u22_11 = np.array([[3, 2], [0, 1]])
+    # U2 = [[u21_11], [u22_11]]
+    # a2 = ['L', 'R']
+    # num_a2 = 2
+
+    # To properly evaluate the actions in code, actions must be represented by one letter
+    prior_1 = np.array([1, 1])
+    T1 = ['Company']
+    u11_21 = np.array([[1,0],[0,0]])    # In general, utility matrix for one player depends on both players' types
+    u11_22 = np.array([[1,-1],[0,0]])
+    U1 = [[u11_21, u11_22]]
+    a1 = ['H', 'N']
     num_a1 = 2
 
-    p = 0.2
+    p = 0.7     # p(t21)
     prior_2 = np.array([p, 1-p])
-    T2 = ['PD_2', 'SH_2']
-    u21 = np.array([[3, 4], [1, 2]])
-    u22 = np.array([[3, 2], [0, 1]])
-    U2 = [u21, u22]
-    a2 = ['L', 'R']
+    T2 = ['High worker', 'Low worker']
+    u21_11 = np.array([[2,1], [0,0]])
+    u22_11 = np.array([[1,2], [0,0]])
+    U2 = [[u21_11], [u22_11]]
+    a2 = ['W', 'S']
     num_a2 = 2
 
     game_info = BNE_instance(prior_1=prior_1, prior_2=prior_2, T1=T1, T2=T2, num_a1=num_a1, num_a2=num_a2, a1=a1, a2=a2,
                              U1=U1, U2=U2)
+
     game_info.interim_exp_comp(game_info.player2, game_info.player1)
     game_info.interim_exp_comp(game_info.player1, game_info.player2)
     payoff1, payoff2 = game_info.ex_ante_exp_comp(action_names=[game_info.player1.a, game_info.player2.a])
-    # print(f'{game_info.player2.A}')
+    print(f'{game_info.player2.interim_exp}')
 
     # Construct the ex-ante utility matrix for both players
     print(bimatrix.print_payoffs([payoff1, payoff2],
@@ -191,13 +226,14 @@ if __name__ == "__main__":
 
     # Eliminated strictly dominated actions for both players, if exists
     A_, payoff_ = bimatrix.IESDS(U=[payoff1, payoff2],A=[game_info.player1.A, game_info.player2.A], DOPRINT=False)
+    print('After removing strictly dominated actions:')
     print(bimatrix.print_payoffs(payoff_, A_, round_decimals=3).to_string())
 
     # Use nashpy to solve the ex-ante equilibrium (usually odd # expected)
     eqs = list(nashpy.Game(payoff_[0], payoff_[1]).support_enumeration())
     print(f'Found {len(eqs)} equilibria')
     for i, eq in enumerate(eqs):
-        print(f'{i}: strgy1={eq[0]}, strgy2={eq[1]}')
+        print(f'{i}: player 1 strategy={eq[0]}, player 2 strategy={eq[1]}')
 
     print('No code error spotted')
 
